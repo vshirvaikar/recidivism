@@ -1,0 +1,21 @@
+I. Load the following packages for data processing.
+
+library(dataPreparation)
+library(data.table)
+library(foreign)
+library(rmarkdown)
+library(mltools)
+
+II. Load the following packages for unsupervised learning.
+
+library(stats)
+library(Hotelling)
+
+III. Load the following packages for supervised learning.
+
+library(pROC)
+library(caret)
+library(e1071)
+library(randomForest)
+library(randomForestExplainer)
+library(MASS)

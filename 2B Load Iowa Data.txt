@@ -1,0 +1,104 @@
+### Government Iowa Dataset
+
+I. Read the dataset and pull out usable columns.
+
+data = read.csv("/Users/vik.shirvaikar/Desktop/Senior Thesis/Data/iowa.csv", header=T)
+age = as.data.table(data[, 5])
+setnames(age, "V1", "age")
+ageR = one_hot(as.data.table(as.factor(data[, 5])))[, 2:5]
+colnames(ageR) = c("25to34", "35to44", "45to54", "over55")
+  # sets "under25" as reference
+type = as.data.table(data[, 7])
+setnames(type, "V1", "type")
+typeR = one_hot(as.data.table(as.factor(data[, 7])))[, c(1, 3:5)]
+colnames(typeR) = c("drug", "property", "public", "violent")
+  # sets "other" as reference
+degree = as.data.table(data[, 6])
+degree[V1 %like% "Felony"] = "Felony"
+degree[V1 %like% "Misdemeanor"] = "Misdemeanor"
+degree[V1 %like% "Community"] = "Special"
+degree[V1 %like% "Special"] = "Special"
+setnames(degree, "V1", "degree")
+release = as.data.table(data[, 9])
+release[V1 %like% "Parole"] = "Parole"
+release[V1 %like% "Discharge"] = "Discharge"
+release[V1 %like% "Special"] = "Special"
+setnames(release, "V1", "release")
+helper = data[, c(6, 9)]
+helper[, 1] = degree
+helper[, 2] = release
+degreeR = one_hot(as.data.table(as.factor(helper[, 1])))[, 1:2]
+colnames(degreeR) = c("felony", "misdemeanor")
+  # sets "community" or "special" as reference
+releaseR = one_hot(as.data.table(as.factor(helper[, 2])))[, 2:3]
+colnames(releaseR) = c("parole", "discharge")
+  # sets "special" as reference
+recid = as.numeric(as.factor(data[, 11])) - 1
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+IAcluster = cbind.data.frame(age, type, degree, release)
+IAregress = cbind.data.frame(recid, ageR, typeR, degreeR, releaseR)
+
+III. For the unsupervised dataset, process the categorical variables with target encoding.
+
+IAbte_age = build_target_encoding(cbind(recid, age), cols_to_encode = "age", target_col = "recid")$age
+IAcluster$age = IAbte_age$recid_mean_by_age[match(unlist(IAcluster$age), IAbte_age$age)]
+IAbte_type = build_target_encoding(cbind(recid, type), cols_to_encode = "type", target_col = "recid")$type
+IAcluster$type = IAbte_type$recid_mean_by_type[match(unlist(IAcluster$type), IAbte_type$type)]
+IAbte_degree = build_target_encoding(cbind(recid, degree), cols_to_encode = "degree", target_col = "recid")$degree
+IAcluster$degree = IAbte_degree$recid_mean_by_degree[match(unlist(IAcluster$degree), IAbte_degree$degree)]
+IAbte_release = build_target_encoding(cbind(recid, release), cols_to_encode = "release", target_col = "recid")$release
+IAcluster$release = IAbte_release$recid_mean_by_release[match(unlist(IAcluster$release), IAbte_release$release)]
+
+cluster = IAcluster
+regress = IAregress
+
+IAsignal = array(0, c(30, 8))
+for(k in 2:8){
+  for(i in 1:30){
+    set.seed(1000*i)
+    signaltest = kmeans(IAcluster, centers=k)
+    IAsignal[i, k] = signaltest$betweenss/signaltest$totss
+  }
+}
+colMeans(IAsignal)
+
+IAsignal5 = vector()
+for(i in 1:10){
+  shuffle = IAcluster[sample(nrow(IAcluster)), ]
+  split = 0.9*dim(shuffle)[1]
+  sample = data.frame(shuffle[1:floor(split), ])
+  samplek = kmeans(sample, centers=5)
+  IAsignal5 = append(IAsignal5, samplek$betweenss/samplek$totss)
+}
+mean(IAsignal5)
+sd(IAsignal5)
+
+set.seed(2020)
+IAkmeans5 = kmeans(IAcluster, centers=5)
+IAregress = cbind(IAregress, IAkmeans5$cluster)
+IAcolsize = length(names(IAregress))-1
+IAhotelling = array(0, c(5, 5))
+for(i in 1:4){
+  for(j in (i+1):5){
+    clusterA = IAregress[IAkmeans5$cluster == i, 2:IAcolsize]
+    clusterB = IAregress[IAkmeans5$cluster == j, 2:IAcolsize]
+    test = hotelling.test(clusterA, clusterB)
+    IAhotelling[i, j] = test$pval
+  }
+}
+
+IAcluster1 = IAregress[IAkmeans5$cluster == 1, 1:IAcolsize]
+IAcluster2 = IAregress[IAkmeans5$cluster == 2, 1:IAcolsize]
+IAcluster3 = IAregress[IAkmeans5$cluster == 3, 1:IAcolsize]
+IAcluster4 = IAregress[IAkmeans5$cluster == 4, 1:IAcolsize]
+IAcluster5 = IAregress[IAkmeans5$cluster == 5, 1:IAcolsize]
+IAcenters = rbind(colMeans(IAcluster1), colMeans(IAcluster2),
+  colMeans(IAcluster3), colMeans(IAcluster4), colMeans(IAcluster5))
+
+IAlog1 = glm(recid ~ ., family = "binomial", data = IAcluster1)
+IAlog2 = glm(recid ~ ., family = "binomial", data = IAcluster2)
+IAlog3 = glm(recid ~ ., family = "binomial", data = IAcluster3)
+IAlog4 = glm(recid ~ ., family = "binomial", data = IAcluster4)
+IAlog5 = glm(recid ~ ., family = "binomial", data = IAcluster5)

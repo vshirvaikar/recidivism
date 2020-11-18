@@ -1,0 +1,128 @@
+### ICPSR North Carolina Dataset
+
+I. Read the dataset and pull out usable columns.
+
+reader = file("/Users/vik.shirvaikar/Desktop/Senior Thesis/Data/northcarolina1.txt", open = "r")
+input = readLines(reader)
+close(reader)
+data = matrix(, nrow = 0, ncol = 28)
+for(line in input){
+  line = strtoi(strsplit(line, split = "")[[1]])
+  if(line[28] != 3){
+    data = rbind(data, line[1:28])
+  }
+}
+reader = file("/Users/vik.shirvaikar/Desktop/Senior Thesis/Data/northcarolina2.txt", open = "r")
+input = readLines(reader)
+close(reader)
+for(line in input){
+  line = strtoi(strsplit(line, split = "")[[1]])
+  if(line[28] != 3){
+    data = rbind(data, line[1:28])
+  }
+}
+data[is.na(data)] = 0
+priors = 10*data[,11] + data[,12]
+school = 10*data[,13] + data[,14]
+violations = 10*data[,15] + data[,16]
+age = (100*data[,17] + 10*data[,18] + data[,19])/12
+timeserved = (100*data[,20] + 10*data[,21] + data[,22])/12
+alcohol = data[,2]
+  # non-alcoholic = 0 and alcohol problem = 1
+drugs = data[,3]
+  # non-drug user = 0 and hard drug user = 1
+release = data[,4]
+  # unsupervised release = 0 and supervised parole = 1
+married = data[,5]
+  # unmarried = 0 and married = 1
+degree = data[,6]
+  # misdemeanor = 0 and felony = 1
+gender = data[,10]
+  # female = 0 and male = 1
+type = data[,8]*2 + data[,9]
+typeR = data[, 8:9]
+colnames(typeR) = c("property", "person")
+  # sets "other" as reference
+recid = data[,25]
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+NCcluster = cbind.data.frame(priors, school, violations, age, timeserved, alcohol,
+  drugs, release, married, degree, gender, type)
+NCregress = cbind.data.frame(recid, priors, school, violations, age, timeserved, alcohol,
+  drugs, release, married, degree, gender, typeR)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value,
+and process the categorical variables with target encoding.
+
+NCcluster$priors = NCcluster$priors/max(NCcluster$priors)
+NCcluster$school = NCcluster$school/max(NCcluster$school)
+NCcluster$violations = NCcluster$violations/max(NCcluster$violations)
+NCcluster$age = NCcluster$age/max(NCcluster$age)
+NCcluster$timeserved = NCcluster$timeserved/max(NCcluster$timeserved)
+NCbte_alcohol = build_target_encoding(cbind(recid, alcohol), cols_to_encode = "alcohol", target_col = "recid")$alcohol
+NCcluster$alcohol = NCbte_alcohol$recid_mean_by_alcohol[match(unlist(NCcluster$alcohol), NCbte_alcohol$alcohol)]
+NCbte_drugs = build_target_encoding(cbind(recid, drugs), cols_to_encode = "drugs", target_col = "recid")$drugs
+NCcluster$drugs = NCbte_drugs$recid_mean_by_drugs[match(unlist(NCcluster$drugs), NCbte_drugs$drugs)]
+NCbte_release = build_target_encoding(cbind(recid, release), cols_to_encode = "release", target_col = "recid")$release
+NCcluster$release = NCbte_release$recid_mean_by_release[match(unlist(NCcluster$release), NCbte_release$release)]
+NCbte_married = build_target_encoding(cbind(recid, married), cols_to_encode = "married", target_col = "recid")$married
+NCcluster$married = NCbte_married$recid_mean_by_married[match(unlist(NCcluster$married), NCbte_married$married)]
+NCbte_degree = build_target_encoding(cbind(recid, degree), cols_to_encode = "degree", target_col = "recid")$degree
+NCcluster$degree = NCbte_degree$recid_mean_by_degree[match(unlist(NCcluster$degree), NCbte_degree$degree)]
+NCbte_gender = build_target_encoding(cbind(recid, gender), cols_to_encode = "gender", target_col = "recid")$gender
+NCcluster$gender = NCbte_gender$recid_mean_by_gender[match(unlist(NCcluster$gender), NCbte_gender$gender)]
+NCbte_type = build_target_encoding(cbind(recid, type), cols_to_encode = "type", target_col = "recid")$type
+NCcluster$type = NCbte_type$recid_mean_by_type[match(unlist(NCcluster$type), NCbte_type$type)]
+
+cluster = NCcluster
+regress = NCregress
+
+NCsignal = array(0, c(30, 8))
+for(k in 2:8){
+  for(i in 1:30){
+    set.seed(1000*i)
+    signaltest = kmeans(NCcluster, centers=k)
+    NCsignal[i, k] = signaltest$betweenss/signaltest$totss
+  }
+}
+colMeans(NCsignal)
+
+NCsignal5 = vector()
+for(i in 1:10){
+  shuffle = NCcluster[sample(nrow(NCcluster)), ]
+  split = 0.9*dim(shuffle)[1]
+  sample = data.frame(shuffle[1:floor(split), ])
+  samplek = kmeans(sample, centers=5)
+  NCsignal5 = append(NCsignal5, samplek$betweenss/samplek$totss)
+}
+mean(NCsignal5)
+sd(NCsignal5)
+
+set.seed(2020)
+NCkmeans5 = kmeans(NCcluster, centers=5)
+NCregress = cbind(NCregress, NCkmeans5$cluster)
+NCcolsize = length(names(NCregress))-1
+NChotelling = array(0, c(5, 5))
+for(i in 1:4){
+  for(j in (i+1):5){
+    clusterA = NCregress[NCkmeans5$cluster == i, 2:NCcolsize]
+    clusterB = NCregress[NCkmeans5$cluster == j, 2:NCcolsize]
+    test = hotelling.test(clusterA, clusterB)
+    NChotelling[i, j] = test$pval
+  }
+}
+
+NCcluster1 = NCregress[NCkmeans5$cluster == 1, 1:NCcolsize]
+NCcluster2 = NCregress[NCkmeans5$cluster == 2, 1:NCcolsize]
+NCcluster3 = NCregress[NCkmeans5$cluster == 3, 1:NCcolsize]
+NCcluster4 = NCregress[NCkmeans5$cluster == 4, 1:NCcolsize]
+NCcluster5 = NCregress[NCkmeans5$cluster == 5, 1:NCcolsize]
+NCcenters = rbind(colMeans(NCcluster1), colMeans(NCcluster2),
+  colMeans(NCcluster3), colMeans(NCcluster4), colMeans(NCcluster5))
+
+NClog1 = glm(recid ~ ., family = "binomial", data = NCcluster1)
+NClog2 = glm(recid ~ ., family = "binomial", data = NCcluster2)
+NClog3 = glm(recid ~ ., family = "binomial", data = NCcluster3)
+NClog4 = glm(recid ~ ., family = "binomial", data = NCcluster4)
+NClog5 = glm(recid ~ ., family = "binomial", data = NCcluster5)

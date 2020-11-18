@@ -1,0 +1,77 @@
+### ProPublica Florida Dataset
+
+I. Read the dataset and pull out usable columns.
+
+data = read.csv("/Users/vik.shirvaikar/Desktop/Senior Thesis/Data/florida.csv", header=T)
+age = data[, 8]
+juv_maj = data[, 11]
+juv_min = data[, 13] + data [, 14]
+priors = data[, 15]
+gender = as.numeric(as.factor(data[, 6])) - 1
+  # "Female" = 0 and "Male" = 1
+degree = 2 - as.numeric(as.factor(data[, 23]))
+  # "M" (misdemeanor) = 0 and "F" (felony) = 1
+recid = data[, 53]
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+FLcluster = cbind.data.frame(age, juv_maj, juv_min, priors, gender, degree)
+FLregress = cbind.data.frame(recid, age, juv_maj, juv_min, priors, gender, degree)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value,
+and process the categorical variables with target encoding.
+
+FLcluster$age = FLcluster$age/max(FLcluster$age)
+FLcluster$juv_maj = FLcluster$juv_maj/max(FLcluster$juv_maj)
+FLcluster$juv_min = FLcluster$juv_min/max(FLcluster$juv_min)
+FLcluster$priors = FLcluster$priors/max(FLcluster$priors)
+FLbte_gender = build_target_encoding(cbind(recid, gender), cols_to_encode = "gender", target_col = "recid")$gender
+FLcluster$gender = FLbte_gender$recid_mean_by_gender[match(unlist(FLcluster$gender), FLbte_gender$gender)]
+FLbte_degree = build_target_encoding(cbind(recid, degree), cols_to_encode = "degree", target_col = "recid")$degree
+FLcluster$degree = FLbte_degree$recid_mean_by_degree[match(unlist(FLcluster$degree), FLbte_degree$degree)]
+
+cluster = FLcluster
+regress = FLregress
+
+FLsignal = array(0, c(30, 8))
+for(k in 2:8){
+  for(i in 1:30){
+    set.seed(1000*i)
+    signaltest = kmeans(FLcluster, centers=k)
+    FLsignal[i, k] = signaltest$betweenss/signaltest$totss
+  }
+}
+colMeans(FLsignal)
+
+FLsignal5 = vector()
+for(i in 1:30){
+  shuffle = FLcluster[sample(nrow(FLcluster)), ]
+  split = 0.9*dim(shuffle)[1]
+  sample = data.frame(shuffle[1:floor(split), ])
+  samplek = kmeans(sample, centers=5)
+  FLsignal5 = append(FLsignal5, samplek$betweenss/samplek$totss)
+}
+mean(FLsignal5)
+sd(FLsignal5)
+
+set.seed(2020)
+FLkmeans5 = kmeans(FLcluster, centers=5)
+FLregress = cbind(FLregress, FLkmeans5$cluster)
+FLcolsize = length(names(FLregress))-1
+FLhotelling = array(0, c(5, 5))
+for(i in 1:4){
+  for(j in (i+1):5){
+    clusterA = FLregress[FLkmeans5$cluster == i, 2:FLcolsize]
+    clusterB = FLregress[FLkmeans5$cluster == j, 2:FLcolsize]
+    test = hotelling.test(clusterA, clusterB)
+    FLhotelling[i, j] = test$pval
+  }
+}
+
+
+
+FLlog1 = glm(recid ~ ., family = "binomial", data = FLcluster1)
+FLlog2 = glm(recid ~ ., family = "binomial", data = FLcluster2)
+FLlog3 = glm(recid ~ ., family = "binomial", data = FLcluster3)
+FLlog4 = glm(recid ~ ., family = "binomial", data = FLcluster4)
+FLlog5 = glm(recid ~ ., family = "binomial", data = FLcluster5)

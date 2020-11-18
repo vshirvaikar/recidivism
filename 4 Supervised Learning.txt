@@ -1,0 +1,66 @@
+I. Undersample the data if necessary for a class imbalance of 55%-45% or less.
+
+regress = split(regress, f = regress$recid)
+regress$'0' = regress$'0'[sample(floor(dim(regress$'1')[1]*55/45)), ]
+regress = rbind(regress$'0', regress$'1')
+regress = split(regress, f = regress$recid)
+regress$'1' = regress$'1'[sample(floor(dim(regress$'0')[1]*55/45)), ]
+regress = rbind(regress$'0', regress$'1')
+
+II. Divide the data into 80% training and 20% testing groups.
+
+shuffle = regress[sample(nrow(regress)), ]
+split = 0.8*dim(shuffle)[1]
+train = regress.frame(shuffle[1:floor(split), ])
+test = regress.frame(shuffle[floor(split+1):dim(shuffle)[1], ])
+rownames(train) = 1:nrow(train)
+rownames(test) = 1:nrow(test)
+
+III. Calculate accuracy and AUC results for logistic regression (LR).
+
+logmodel = glm(recid ~ ., family = "binomial", data = train)
+predicted = 1/(1+exp(-1*predict(logmodel, test)))
+confusionMatrix(factor(round(predicted)), factor(test$recid))
+results = cbind(test$recid, predicted)
+colnames(results) = c("actual", "predicted")
+roc(actual ~ predicted, data = data.frame(results))
+plot(roc(actual ~ predicted, data = data.frame(results)))
+
+IV. Calculate accuracy and AUC results for random forest (RF).
+
+rfmodel = randomForest(factor(recid) ~ ., data = train, importance = T)
+predicted = predict(rfmodel, test)
+confusionMatrix(factor(predicted), factor(test$recid))
+measure_importance(rfmodel)
+results = cbind(test$recid, predicted)
+colnames(results) = c("actual", "predicted")
+roc(actual ~ predicted, data = data.frame(results))
+plot(roc(actual ~ predicted, data = data.frame(results)))
+
+V. Calculate accuracy and AUC results for support vector machine (SVM).
+
+svmmodel = svm(recid ~ ., data = train, type = "C-classification")
+predicted = predict(svmmodel, test)
+confusionMatrix(factor(predicted), factor(test$recid))
+results = cbind(test$recid, predicted)
+colnames(results) = c("actual", "predicted")
+roc(actual ~ predicted, data = data.frame(results))
+plot(roc(actual ~ predicted, data = data.frame(results)))
+
+VI. Calculate accuracy and AUC results for linear discriminant analysis (LDA).
+
+ldamodel = lda(recid ~ ., data = train)
+predicted = predict(ldamodel, test)$posterior[, 2]
+confusionMatrix(factor(round(predicted)), factor(test$recid))
+results = cbind(test$recid, predicted)
+colnames(results) = c("actual", "predicted")
+roc(actual ~ predicted, data = data.frame(results))
+plot(roc(actual ~ predicted, data = data.frame(results)))
+
+VII. Perform the selected method (logistic regression) for each cluster.
+
+log1 = glm(recid ~ ., family = "binomial", data = cluster1)
+log2 = glm(recid ~ ., family = "binomial", data = cluster2)
+log3 = glm(recid ~ ., family = "binomial", data = cluster3)
+log4 = glm(recid ~ ., family = "binomial", data = cluster4)
+log5 = glm(recid ~ ., family = "binomial", data = cluster5)
