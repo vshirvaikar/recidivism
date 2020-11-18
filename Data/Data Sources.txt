@@ -1,0 +1,14 @@
+Florida: J. Angwin, J. Larson, S. Mattu, and L. Kirchner, "Machine Bias: There’s software used across the country to 
+predict future criminals. And it’s biased against blacks," ProPublica, 2016.
+
+Iowa: Iowa Department of Corrections, "3-Year Recidivism for Offenders Released from Prison in Iowa," 
+State of Iowa, Des Moines, IA, Sep. 2019.
+
+North Carolina: P. Schmidt and A. D. Witte, "Predicting Recidivism in North Carolina, 1978 and 1980," 
+Inter-university Consortium for Political and Social Research, Ann Arbor, MI, Jan. 2006.
+
+California: S. D. Gottfredson and D. M. Gottfredson, "Criminal Violence and Incapacitation in California, 1962-1988," 
+Inter-university Consortium for Political and Social Research, Ann Arbor, MI, Nov. 2005.
+
+Michigan: R. A. Bradshaw, "Cross-Validation of the Iowa Offender Risk Assessment Model in Michigan, 1980-1982," 
+Inter-university Consortium for Political and Social Research, Ann Arbor, MI, Jan. 2006.
