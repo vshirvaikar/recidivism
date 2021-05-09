@@ -1,0 +1,64 @@
+### ICPSR North Carolina Dataset
+
+I. Read the dataset and pull out usable columns.
+
+reader = file("/~/northcarolina1.txt", open = "r")
+input = readLines(reader)
+close(reader)
+data = matrix(, nrow = 0, ncol = 28)
+for(line in input){
+  line = strtoi(strsplit(line, split = "")[[1]])
+  if(line[28] != 3){
+    data = rbind(data, line[1:28])
+  }
+}
+reader = file("/~/northcarolina2.txt", open = "r")
+input = readLines(reader)
+close(reader)
+for(line in input){
+  line = strtoi(strsplit(line, split = "")[[1]])
+  if(line[28] != 3){
+    data = rbind(data, line[1:28])
+  }
+}
+data[is.na(data)] = 0
+priors = 10*data[,11] + data[,12]
+school = 10*data[,13] + data[,14]
+violations = 10*data[,15] + data[,16]
+age = (100*data[,17] + 10*data[,18] + data[,19])/12
+timeserved = (100*data[,20] + 10*data[,21] + data[,22])/12
+alcohol = data[,2]
+  # non-alcoholic = 0 and alcohol problem = 1
+drugs = data[,3]
+  # non-drug user = 0 and hard drug user = 1
+release = data[,4]
+  # unsupervised release = 0 and supervised parole = 1
+married = data[,5]
+  # unmarried = 0 and married = 1
+degree = data[,6]
+  # misdemeanor = 0 and felony = 1
+gender = data[,10]
+  # female = 0 and male = 1
+type = data[,8]*2 + data[,9]
+typeR = data[, 8:9]
+colnames(typeR) = c("property", "person")
+  # sets "other" as reference
+recid = data[,25]
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+NCcluster = cbind.data.frame(priors, school, violations, age, timeserved, alcohol,
+  drugs, release, married, degree, gender, type)
+NCregress = cbind.data.frame(recid, priors, school, violations, age, timeserved, alcohol,
+  drugs, release, married, degree, gender, typeR)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value.
+
+NCcluster$priors = NCcluster$priors/max(NCcluster$priors)
+NCcluster$school = NCcluster$school/max(NCcluster$school)
+NCcluster$violations = NCcluster$violations/max(NCcluster$violations)
+NCcluster$age = NCcluster$age/max(NCcluster$age)
+NCcluster$timeserved = NCcluster$timeserved/max(NCcluster$timeserved)
+
+cluster = NCcluster
+regress = NCregress

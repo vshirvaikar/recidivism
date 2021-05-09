@@ -1,0 +1,40 @@
+### ICPSR California Dataset
+
+I. Read the dataset and pull out usable columns.
+
+data = read.dta("/~/california.dta")
+data = data[(data$V4 != 99 & data$V25 != 99), 4:27]
+age = as.numeric(data$V4)
+priors = as.numeric(data$V13)
+aliases = as.numeric(data$V17)
+prisontime = as.numeric(data$V25)
+category = as.numeric(data$V7) - 1
+  # sets "violator" as 0 and "original commitment" as 1
+econ = 2 - as.numeric(data$V11)
+  # sets illegal economic gain as 1 and no gain as 0
+fiveyr = as.numeric(data$V14) - 1
+  # sets five-year arrest-free period as 1 and no period as 0
+opiate = 2 - as.numeric(data$V15)
+  # sets history of opiate use as 1 and no use as 0
+theft = 2 - as.numeric(data$V16)
+  # sets checks/burglary offense as 1 and no offense as 0
+type = as.numeric(data$V22)*3 + as.numeric(data$V23)*2 + as.numeric(data$V24)
+typeR = as.data.frame(cbind(as.numeric(data$V22), as.numeric(data$V23), as.numeric(data$V24)))
+colnames(typeR) = c("nuisance", "person", "property")
+  # sets "other" as reference
+recid = as.numeric(data$V5)
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+CAcluster = cbind.data.frame(age, priors, aliases, prisontime, category, econ, fiveyr, opiate, theft, type)
+CAregress = cbind.data.frame(recid, age, priors, aliases, prisontime, category, econ, fiveyr, opiate, theft, typeR)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value.
+
+CAcluster$age = CAcluster$age/max(CAcluster$age)
+CAcluster$priors = CAcluster$priors/max(CAcluster$priors)
+CAcluster$aliases = CAcluster$aliases/max(CAcluster$aliases)
+CAcluster$prisontime = CAcluster$prisontime/max(CAcluster$prisontime)
+
+cluster = CAcluster
+regress = CAregress

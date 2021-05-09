@@ -1,37 +1,22 @@
-I. Calculate the clustering signal-to-noise ratio across 30 runs from k=2 to k=8.
+I. Calculate the McClain-Rao clustering index across 10 runs from k=3 to k=15.
 
-snr = array(0, c(30, 8))
-for(k in 2:8){
-  for(i in 1:30){
+mcclain = array(0, c(10, 15))
+for(c in 3:15){
+  for(i in 1:10){
     set.seed(1000*i)
-    snrtest = kmeans(cluster, centers=k)
-    snr[i, k] = snrtest$betweenss/snrtest$totss
+    kproto = kproto(x=cluster, k=c)
+    mcclain[i, c] = validation_kproto(object=kproto, method="mcclain")
   }
 }
-colMeans(snr)
 
-II. For the selected value of k (k=5 for all states except k=6 for Michigan),
-calculate the clustering signal-to-noise ratio across 10 cross-validation runs.
-
-signal = vector()
-k = 5
-for(i in 1:30){
-  shuffle = cluster[sample(nrow(cluster)), ]
-  split = 0.9*dim(shuffle)[1]
-  sample = data.frame(shuffle[1:floor(split), ])
-  samplek = kmeans(sample, centers=k)
-  signal = append(signal, samplek$betweenss/samplek$totss)
-}
-mean(signal)
-sd(signal)
-
-III. Perform the final clustering run with a fixed random seed and check cluster
-distinctiveness with pairwise Hotelling t-squared tests.
+II. Perform the final clustering run with a fixed random seed and value of k,
+then check cluster distinctiveness with pairwise Hotelling t-squared tests.
 
 set.seed(2020)
-clustering = kmeans(cluster, centers=k)
-colsize = length(names(regress))
-regress = cbind(regress, clustering$cluster)
+knum = 6
+kproto = kproto(x=cluster, k=knum)
+regress = cbind(regress, kproto$cluster)
+colsize = length(names(regress))-1
 hotelling = array(0, c(5, 5))
 for(i in 1:4){
   for(j in (i+1):5){
@@ -42,12 +27,13 @@ for(i in 1:4){
   }
 }
 
-IV. Append the clustering results and view the cluster centroids.
+III. Append the clustering results and view the cluster centroids.
 
 cluster1 = regress[clustering$cluster == 1, 1:colsize]
 cluster2 = regress[clustering$cluster == 2, 1:colsize]
 cluster3 = regress[clustering$cluster == 3, 1:colsize]
 cluster4 = regress[clustering$cluster == 4, 1:colsize]
 cluster5 = regress[clustering$cluster == 5, 1:colsize]
-centers = rbind(colMeans(cluster1), colMeans(cluster2),
-  colMeans(cluster3), colMeans(cluster4), colMeans(cluster5))
+cluster6 = regress[clustering$cluster == 6, 1:colsize]
+centers = rbind(colMeans(cluster1), colMeans(cluster2), colMeans(cluster3),
+  colMeans(cluster4), colMeans(cluster5), colMeans(cluster6))

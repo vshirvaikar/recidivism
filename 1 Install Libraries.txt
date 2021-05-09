@@ -9,6 +9,7 @@ library(mltools)
 II. Load the following packages for unsupervised learning.
 
 library(stats)
+library(clustMixType)
 library(Hotelling)
 
 III. Load the following packages for supervised learning.

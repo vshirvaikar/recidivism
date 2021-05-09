@@ -1,0 +1,29 @@
+### ProPublica Florida Dataset
+
+I. Read the dataset and pull out usable columns.
+
+data = read.csv("/~/florida.csv", header=T)
+age = data[, 8]
+juv_maj = data[, 11]
+juv_min = data[, 13] + data [, 14]
+priors = data[, 15]
+gender = as.numeric(as.factor(data[, 6])) - 1
+  # "Female" = 0 and "Male" = 1
+degree = 2 - as.numeric(as.factor(data[, 23]))
+  # "M" (misdemeanor) = 0 and "F" (felony) = 1
+recid = data[, 53]
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+FLcluster = cbind.data.frame(age, juv_maj, juv_min, priors, gender, degree)
+FLregress = cbind.data.frame(recid, age, juv_maj, juv_min, priors, gender, degree)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value.
+
+FLcluster$age = FLcluster$age/max(FLcluster$age)
+FLcluster$juv_maj = FLcluster$juv_maj/max(FLcluster$juv_maj)
+FLcluster$juv_min = FLcluster$juv_min/max(FLcluster$juv_min)
+FLcluster$priors = FLcluster$priors/max(FLcluster$priors)
+
+cluster = FLcluster
+regress = FLregress

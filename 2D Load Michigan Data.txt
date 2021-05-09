@@ -1,0 +1,48 @@
+### ICPSR Michigan Dataset
+
+I. Read the dataset and pull out usable columns.
+
+reader = file("/~/michigan.txt", open = "r")
+input = readLines(reader)
+close(reader)
+data = matrix(, nrow = 0, ncol = 75)
+for(line in input){
+  line = strtoi(strsplit(line, split = "")[[1]])
+  if(line[54] != 2){
+    data = rbind(data, line[1:75])
+  }
+}
+arrests = 10*data[,27] + data[,28]
+probations = 10*data[,29] + data[,30]
+jailings = 10*data[,31] + data[,32]
+juv_priors = data[,34]
+adult_priors = data[,36]
+gender = data[,23]
+  # female = 0 and male = 1
+married = 1 - data[,24]
+  # unmarried = 0 and married = 1
+drugs = ceiling(data[,25]/8)
+  # no problem drug use = 0 and any problem drug use = 1
+escape = data[,42]
+  # no escape attempt = 0 and escape attempt = 1
+conduct = ceiling(data[,43]/2)
+  # no prison misconduct = 0 and prison misconduct = 1
+recid = ceiling((data[,54] - 1)/5)
+
+II. Compose the combined unsupervised (without recidivism) and supervised (with recidivism) datasets.
+
+MIcluster = cbind.data.frame(arrests, probations, jailings, juv_priors, adult_priors,
+  gender, married, drugs, escape, conduct)
+MIregress = cbind.data.frame(recid, arrests, probations, jailings, juv_priors, adult_priors,
+  gender, married, drugs, escape, conduct)
+
+III. For the unsupervised dataset, normalize the numerical variables through division by the maximum value.
+
+MIcluster$arrests = MIcluster$arrests/max(MIcluster$arrests)
+MIcluster$probations = MIcluster$probations/max(MIcluster$probations)
+MIcluster$jailings = MIcluster$jailings/max(MIcluster$jailings)
+MIcluster$juv_priors = MIcluster$juv_priors/max(MIcluster$juv_priors)
+MIcluster$adult_priors = MIcluster$adult_priors/max(MIcluster$adult_priors)
+
+cluster = MIcluster
+regress = MIregress
