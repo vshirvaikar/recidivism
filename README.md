@@ -5,5 +5,5 @@ The datasets and codebook come from the study "Predicting Recidivism in North Ca
 
 Code for loading the necessary R libraries is in document 1.  
 Code for loading and cleaning the data is in document 2.  
-Code for directed acyclic graph (DAG) analysis, including graph discovery and adjustment with logistic and survival models, is in document 3.
+Code for directed acyclic graph (DAG) analysis, including graph discovery and adjustment with logistic and survival models, is in document 3.  
 Code for double/debiased machine learning (DML) analysis, including model fitting and sensitivity, is in document 4.  
