@@ -33,3 +33,22 @@ for(i in 1:length(dag.data)){
   dag.frame$prisontime = dag.frame$prisontime + 1
   print(mean(predict(dag.model[[i]], dag.frame, type="response")))
 }
+
+survtime = ifelse(recid==1, returntime, followup)
+data.cox = cbind(survtime, data.adj)
+model.cox = coxph(Surv(survtime, recid)~., data=data.cox)
+data.coxpar = data.cox[parole==1,]
+model.coxpar = coxph(Surv(survtime, recid)~., data=data.coxpar)
+data.coxfel = data.cox[felony==1,]
+model.coxfel = coxph(Surv(survtime, recid)~., data=data.coxfel)
+data.coxmis = data.cox[felony==0,]
+model.coxmis = coxph(Surv(survtime, recid)~., data=data.coxmis)
+
+cox.data = list(data.cox, data.coxpar, data.coxfel, data.coxmis)
+cox.model = list(model.cox, model.coxpar, model.coxfel, model.coxmis)
+for(i in 1:length(cox.data)){
+  cox.frame = cox.data[[i]]
+  print(1-mean(summary(survfit(cox.model[[i]], cox.frame), time=5)$surv))
+  cox.frame$prisontime = cox.frame$prisontime + 1
+  print(1-mean(summary(survfit(cox.model[[i]], cox.frame), time=5)$surv))
+}
